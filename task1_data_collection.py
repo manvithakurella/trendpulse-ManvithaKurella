@@ -29,16 +29,12 @@ print("After removing low scores:", len(df))
 # Remove extra whitespace from title
 df["title"] = df["title"].str.strip()
 
-
-
 # 3 — Save as CSV
 output_path = "/trends_20260414.csv"
 
 df.to_csv(output_path, index=False)
 
 print(f"Saved {len(df)} rows to {output_path}")
-
-
 
 # stories per category
 if "category" in df.columns:
