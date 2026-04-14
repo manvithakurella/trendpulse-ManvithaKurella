@@ -1,1 +1,48 @@
-{"nbformat":4,"nbformat_minor":0,"metadata":{"colab":{"provenance":[],"authorship_tag":"ABX9TyP+351g/B2KfX3ki5QuSquN"},"kernelspec":{"name":"python3","display_name":"Python 3"},"language_info":{"name":"python"}},"cells":[{"cell_type":"code","execution_count":26,"metadata":{"id":"grWfHepo8r1t","colab":{"base_uri":"https://localhost:8080/"},"executionInfo":{"status":"ok","timestamp":1776184637503,"user_tz":-330,"elapsed":48961,"user":{"displayName":"Manvitha Phani","userId":"03845076502335227372"}},"outputId":"b930331d-ab98-425e-9752-77424bf6c15f"},"outputs":[{"output_type":"stream","name":"stdout","text":["collected 62 stories.saved to data/trends_20260414.json\n"]}],"source":["#Task1_Fetch Data from API\n","\n","import requests\n","import time\n","import json\n","import os\n","from datetime import datetime\n","\n","headers = {\"User-Agent\": \"TrendPulse/1.0\"}\n","\n","#Category Keywords\n","\n","CATEGORIES = {\n","    \"technology\": [\"ai\", \"software\", \"tech\", \"code\", \"computer\", \"data\", \"cloud\", \"API\", \"GPU\", \"LLM\"],\n","    \"worldnews\": [\"war\", \"government\", \"country\", \"president\", \"election\", \"climate\", \"attack\", \"global\"],\n","    \"sports\": [\"NFL\", \"NBA\", \"FIFA\", \"sport\", \"game\", \"team\", \"player\", \"league\", \"championship\"],\n","    \"science\": [\"research\", \"study\", \"space\", \"physics\", \"biology\", \"discovery\", \"NASA\", \"genome\"],\n","    \"entertainment\": [\"movie\", \"film\", \"music\", \"netflix\", \"game\", \"book\", \"show\", \"award\", \"streaming\"]\n","}\n","\n","def get_category(title):\n","  tilte = title.lower()\n","  for category, keywords in CATEGORIES.items():\n","    for word in keywords:\n","      if word in title:\n","        return category\n","  return None\n","\n","# Step 1 — Get the list of top story IDs:\n","def fetch_data():\n","  url = \"https://hacker-news.firebaseio.com/v0/topstories.json\"\n","  ids = requests.get(url, headers=headers).json()[:500]\n","\n","  collected = []\n","  category_count = {cat: 0 for cat in CATEGORIES}\n","\n","#Step 2 — Get each story's details:\n","\n","  for story_ids in ids:\n","    try:\n","      res = requests.get(\n","          f\"https://hacker-news.firebaseio.com/v0/item/{story_ids}.json\",\n","          headers=headers\n","      )\n","      data = res.json()\n","\n","      if not data or \"title\" not in data:\n","          continue\n","      category = get_category(data[\"title\"])\n","      if category and category_count[category] < 25:\n","         story = {\n","             \"post_id\": data.get(\"id\"),\n","             \"title\": data.get(\"title\"),\n","             \"category\": category,\n","             \"score\": data.get(\"score\", 0),\n","             \"num_comments\": data.get(\"descendants\", 0),\n","             \"author\": data.get(\"by\"),\n","             \"collected_at\": datetime.now().strftime(\"%Y-%m-%d %H:%M:%S\")\n","\n","         }\n","\n","         collected.append(story)\n","         category_count[category]+=1\n","\n","      #Stop if all catergories filled\n","\n","      if all(v>=25 for v in category_count.values()):\n","          break\n","    except Exception as e:\n","        print(f\"Error Fetching {story_id}: {e}\")\n","\n","  return collected\n","\n","# Save File in JSON\n","\n","def save_json(data):\n","  os.makedirs(\"data\", exist_ok=True)\n","  filename = f\"data/trends_{datetime.now().strftime('%Y%m%d')}.json\"\n","\n","  with open(filename, \"w\") as f:\n","    json.dump(data, f,indent=4)\n","\n","\n","  print(f\"collected {len(data)} stories.saved to {filename}\")\n","\n","if __name__ == \"__main__\":\n","  data = fetch_data()\n","  save_json(data)\n"]},{"cell_type":"code","source":["\n","\n","\n"],"metadata":{"id":"PH8C0NT8EJTg","executionInfo":{"status":"ok","timestamp":1776183104308,"user_tz":-330,"elapsed":22,"user":{"displayName":"Manvitha Phani","userId":"03845076502335227372"}}},"execution_count":18,"outputs":[]},{"cell_type":"code","source":[],"metadata":{"id":"I_55L_i5Eze3","executionInfo":{"status":"ok","timestamp":1776183082235,"user_tz":-330,"elapsed":9,"user":{"displayName":"Manvitha Phani","userId":"03845076502335227372"}}},"execution_count":18,"outputs":[]}]}
+
+#Task_2: TrendPulse: What's Actually Trending Right Now
+
+import pandas as pd
+
+#1 Load the JSON file
+
+df = pd.read_json("/trends_20260414.json")
+
+print(f"Loaded {len(df)} stories from {"/trends_20260414.json"}")
+
+# 2 — Clean the Data
+# Remove duplicates based on post_id
+df = df.drop_duplicates(subset="post_id")
+print("After removing duplicates:", len(df))
+
+# Removing Null
+df = df.dropna(subset=["post_id", "title", "score"])
+print("After removing nulls:", len(df))
+
+# Convert data types
+df["score"] = df["score"].astype(int)
+df["num_comments"] = df["num_comments"].astype(int)
+
+# Remove low-Scores
+df = df[df["score"] >= 5]
+print("After removing low scores:", len(df))
+
+# Remove extra whitespace from title
+df["title"] = df["title"].str.strip()
+
+
+
+# 3 — Save as CSV
+output_path = "/trends_20260414.csv"
+
+df.to_csv(output_path, index=False)
+
+print(f"Saved {len(df)} rows to {output_path}")
+
+
+
+# stories per category
+if "category" in df.columns:
+    print("\nStories per category:")
+    print(df["category"].value_counts())
+else:
+    print("\nNo 'category' column found.")
